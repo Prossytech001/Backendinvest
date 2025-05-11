@@ -9,6 +9,8 @@ const UserSchema = new mongoose.Schema({
     stakes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Stake" }], // Reference to staked funds
     totalEarnings: { type: Number, default: 0 }, // Daily ROI accumulates here
     withdrawableBalance: { type: Number, default: 0 }, // Earnings from completed plans
+    resetToken: String,
+    resetTokenExpiration: Date,
     createdAt: { type: Date, default: Date.now },
     otp: String,
     otpExpires: Date,

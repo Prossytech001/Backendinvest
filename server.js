@@ -78,14 +78,15 @@ app.use('/api', contactRoute);
 const paymentRoutes = require('./routes/paymentRoutes');
 app.use('/api/payments', paymentRoutes);
 
-
+const forgetRoutes = require('./routes/forgetPasswordRoutes')
+app.use('/api/auth', forgetRoutes)
 
 
 // app.get("/", (req, res) => {
 //   res.send("API is running...");
 // });
-app.get("/test", (req, res) => {
-  res.send("Test route working!");
+app.get("/", (req, res) => {
+  res.send("app is running...");
 });
 
 
