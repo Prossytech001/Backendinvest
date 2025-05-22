@@ -25,37 +25,10 @@
 // module.exports = { protect };
 
 
-// middleware/authMiddleware.js
+//middleware/authMiddleware.js
 const jwt = require("jsonwebtoken");
 const User = require("../model/User");
 
-// const protect = async (req, res, next) => {
-//   console.log("Protect middleware triggered"); // Add this to check if the middleware is running
-
-//   const token = req.header("Authorization")?.replace("Bearer ", "");
-//   if (!token) {
-//     console.log("No token provided"); // Log if there's no token
-//     return res.status(401).json({ message: "No token, authorization denied" });
-//   }
-
-//   try {
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     console.log("Decoded userId:", decoded.userId); // Log the decoded userId
-//     req.user = await User.findById(decoded.userId); // Get user from the token
-//     if (!req.user) {
-//       console.log("User not found"); // Log if no user found
-//       return res.status(401).json({ message: "User not found" });
-//     }
-//     console.log("User found:", req.user.username); // Log the user's name to check
-
-//     next(); // Proceed to the next route handler
-//   } catch (error) {
-//     console.log("Error in protect middleware:", error.message); // Log the error message
-//     res.status(401).json({ message: "Invalid token" });
-//   }
-// };
-
-// module.exports = { protect };
 const protect = async (req, res, next) => {
   console.log("Protect middleware triggered");
 
@@ -86,3 +59,25 @@ const protect = async (req, res, next) => {
 
 
 module.exports = { protect };
+
+// const jwt = require("jsonwebtoken");
+// const User = require("../model/User");
+
+// const protect = async (req, res, next) => {
+//   const token = req.header("Authorization")?.replace("Bearer ", "");
+//   if (!token) return res.status(401).json({ message: "No token provided" });
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const user = await User.findById(decoded.id);  // `id` should match the payload field
+//     if (!user) {
+//       return res.status(401).json({ message: "User not found" });
+//     }
+//     req.user = user;  // Attach the user object to the request for further use
+//     next();
+//   } catch (error) {
+//     res.status(401).json({ message: "Invalid token" });
+//   }
+// };
+
+// module.exports = {protect};

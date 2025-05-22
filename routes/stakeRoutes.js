@@ -219,117 +219,12 @@ const Stake = require("../model/Stake");
  const Plan = require("../model/Plan");
  const { protect } = require("../middleware/authMiddleware");
  const { claimDailyROI } = require("../controllers/stakeController");
+ const Activity = require("../model/Activity");
+ const Activitys = require("../model/Activitys");
 
 const router = express.Router();
 
-// router.post("/create", protect, async (req, res) => {
-//     try {
-//       const { amount, planId } = req.body;
-//       const userId = req.user.id;
-  
-//       if (!amount || !planId) {
-//         return res.status(400).json({ message: "Amount and planId are required" });
-//       }
-  
-//       const plan = await Plan.findById(planId);
-//       if (!plan) {
-//         return res.status(404).json({ message: "Plan not found" });
-//       }
-  
-//       const user = await User.findById(userId);
-//       if (!user) {
-//         return res.status(404).json({ message: "User not found" });
-//       }
-  
-//       if (user.balance < amount) {
-//         return res.status(400).json({ message: "Insufficient balance" });
-//       }
-  
-//       const roiPerDay = (amount * plan.dailyROI) / 100;
-//       const maturityDate = new Date();
-//       maturityDate.setDate(maturityDate.getDate() + plan.duration);
-  
-//       const stake = new Stake({
-//         user: userId,
-//         plan: planId,
-//         amount,
-//         roiPerDay,
-//         maturityDate,
-//       });
-  
-//       await stake.save();
-  
-//       user.balance -= amount;
-//       await user.save();
-  
-//       res.status(201).json({ message: "Stake created", stake });
-//     } catch (error) {
-//       console.error("Stake creation error:", error);
-//       res.status(500).json({ message: "Server error" });
-//     }
-//   });
-  
-// @route   POST /api/stakes/create
-// @desc    Create a new stake
-// @access  Private
-// router.post("/create", protect, async (req, res) => {
-//   const { amount, plan: planId, dailyROI } = req.body;
-
-//   try {
-//     const user = req.user;
-
-//     // 1. Validate amount
-//     if (!amount || isNaN(amount) || amount <= 0) {
-//       return res.status(400).json({ message: "Invalid amount" });
-//     }
-
-//     // 2. Fetch the plan
-//     const plan = await Plan.findById(planId);
-//     if (!plan) {
-//       return res.status(404).json({ message: "Plan not found" });
-//     }
-
-//     // 3. Check if user has enough balance
-//     if (user.balance < amount) {
-//       return res.status(400).json({ message: "Insufficient balance" });
-//     }
-
-//     // 4. Calculate maturity and ROI values
-//     const dailyReturn = amount * plan.dailyROI;
-//     const maturityDate = new Date();
-//     maturityDate.setDate(maturityDate.getDate() + plan.durationDays);
-
-//     // 5. Create stake
-//     const stake = await Stake.create({
-//       user: user._id,
-//       amount,
-//       plan: plan._id,
-//       dailyROI: plan.dailyROI,
-//       durationDays: plan.durationDays,
-//       startDate: new Date(),
-//     });
-
-//     // 6. Deduct balance and save user
-//     user.balance -= amount;
-//     user.stakes.push(stake._id);
-//     await user.save();
-
-//     res.status(201).json({
-//       message: "Stake created successfully",
-//       stake,
-//       newBalance: user.balance,
-//     });
-//   } catch (err) {
-//     console.error("Error creating stake:", err.message);
-//     res.status(500).json({ message: "Server error" });
-//   }
-
-//   if (amount < plan.minInvestment || amount > plan.maxInvestment) {
-//     return res.status(400).json({ message: `Amount must be between ${plan.minInvestment} and ${plan.maxInvestment}` });
-//   }
-  
-
-// });
+// @route   POST /api/stakes/claim-daily
 router.post("/claim-daily", protect, claimDailyROI);
 
 router.post("/create", protect, async (req, res) => {
@@ -384,6 +279,20 @@ router.post("/create", protect, async (req, res) => {
       user.balance -= amount;
       user.stakes.push(stake._id);
       await user.save();
+
+      await Activity.create({
+            userId: user._id,
+            type: 'stake',
+            stakeId: stake._id,
+            description: `${user.username} created a stake of ₦${amount} in the ${plan.name} plan.`,
+          });
+          await new Activitys({
+  user: req.user.id,
+  type: 'Stake Created',
+  amount: amount,
+  plan: planId,
+}).save();
+
   
       res.status(201).json({
         message: "Stake created successfully",
@@ -417,6 +326,55 @@ router.get("/mine", protect, async (req, res) => {
       res.status(500).json({ message: "Failed to fetch stakes." });
     }
   });
+
+  // POST /api/stakes/:stakeId/claim
+router.post("/:stakeId/claim", protect, async (req, res) => {
+  try {
+    const stake = await Stake.findById(req.params.stakeId);
+    if (!stake) return res.status(404).json({ message: "Stake not found" });
+    if (stake.isCompleted) return res.status(400).json({ message: "This stake is already completed" });
+
+    const today = new Date().toDateString();
+    const lastClaim = new Date(stake.lastClaimDate || stake.startDate).toDateString();
+
+    if (today === lastClaim) {
+      return res.status(400).json({ message: "Already claimed today" });
+    }
+
+    const user = await User.findById(stake.user);
+    const dailyEarning = (stake.amount * stake.dailyROI) / 100;
+
+    stake.earningsSoFar += dailyEarning;
+    stake.totalEarnings += dailyEarning;
+    stake.lastClaimDate = new Date();
+    stake.roiHistory.push({ date: new Date(), amount: dailyEarning });
+    await stake.save();
+
+    user.totalEarnings += dailyEarning;
+    await user.save();
+
+    await new Activitys({
+      user: user._id,
+      type: 'Daily ROI Claimed',
+      amount: dailyEarning,
+      description: `Claimed ROI from stake ₦${stake.amount}`,
+    }).save();
+
+    res.status(200).json({
+      message: "ROI claimed successfully!",
+      stake,
+      userTotals: {
+        totalEarnings: user.totalEarnings,
+        withdrawableBalance: user.withdrawableBalance,
+      },
+    });
+
+  } catch (err) {
+    console.error("Stake ROI claim failed:", err);
+    res.status(500).json({ message: "Failed to claim ROI for this stake" });
+  }
+});
+
 
 module.exports = router;
 

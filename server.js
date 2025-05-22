@@ -82,6 +82,27 @@ const forgetRoutes = require('./routes/forgetPasswordRoutes')
 app.use('/api/auth', forgetRoutes)
 
 
+//Admin Routes
+
+
+const adminAuthRoutes = require('./routes/adminAuth');
+const adminRoutes = require('./routes/adminRoutes');
+
+app.use('/api/admin', adminAuthRoutes);
+app.use('/api/admin', adminRoutes);
+
+
+//admin overview routes
+const adminOverviewRoutes = require('./routes/adminOverview');
+app.use('/api/admin/overview', adminOverviewRoutes);
+
+
+app.use('/api/admin/users', require('./routes/adminUsers'));
+
+const userActivityRoutes = require('./routes/activity');
+app.use('/api/activity', userActivityRoutes);
+
+
 // app.get("/", (req, res) => {
 //   res.send("API is running...");
 // });
