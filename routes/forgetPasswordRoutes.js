@@ -109,15 +109,18 @@ const router = express.Router();
 
 // Nodemailer Transporter (use your email service credentials)
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or use any service like 'Mailgun', 'SendGrid', etc.
+  host: process.env.EMAIL_HOST,         // smtp-relay.brevo.com
+  port: process.env.EMAIL_PORT,         // 587
+  secure: false,                         // TLS, not SSL
   auth: {
-    user: process.env.CONTACT_EMAIL,  // Your email
-    pass: process.env.CONTACT_EMAIL_PASSWORD // Your email password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
   tls: {
-    rejectUnauthorized: false, // <-- Allow self-signed certs
+    rejectUnauthorized: false,
   },
 });
+
 
 // Forgot Password Route
 router.post('/forgot-password', async (req, res) => {
@@ -160,89 +163,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Reset Password Route
-// router.post('/reset-password/:resetToken', async (req, res) => {
-//   const { resetToken } = req.params;
-//   const { password } = req.body;
 
-//   try {
-//     // Hash the token from the request to match with stored token
-//     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-//     console.log('Hashed Token:', hashedToken); 
-
-//     // Find user with the valid token and token expiration
-//     const user = await User.findOne({
-//       resetToken: hashedToken,
-//       resetTokenExpiration: { $gt: Date.now() }
-     
-//     });
-//     console.log('Searching for user with token:', hashedToken);
-
-//     if (!user) {
-//       return res.status(400).json({ message: 'Invalid or expired reset token' });
-//     }
-
-//     // Hash the new password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // Update the user's password
-//     user.password = hashedPassword;
-//     user.resetToken = undefined;  // Clear the reset token after successful password change
-//     user.resetTokenExpiration = undefined;  // Clear the token expiration
-//     await user.save();
-
-//     res.status(200).json({ message: 'Password reset successful' });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Error resetting password.' });
-//   }
-
-//   console.log('Request body:', req.body);
-// console.log('Token from URL:', resetToken);
-// });
-// router.post('/reset-password/:resetToken', async (req, res) => {
-//   const { resetToken } = req.params;
-//   const { password } = req.body;
-
-//   try {
-//     // Hash the token from the request to match with stored token
-//     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-//     console.log('Hashed Token:', hashedToken); 
-
-//     // Find user with the valid token and token expiration
-//     const user = await User.findOne({
-//       resetToken: hashedToken,
-//       resetTokenExpiration: { $gt: Date.now() } // Token not expired
-//     });
-
-//     console.log('Searching for user with token:', hashedToken);
-
-//     if (!user) {
-//       console.log('Invalid or expired token');
-//       return res.status(400).json({ message: 'Invalid or expired reset token' });
-//     }
-
-//     // Hash the new password
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     // Update the user's password
-//     user.password = hashedPassword;
-//     user.resetToken = undefined;  // Clear the reset token after successful password change
-//     user.resetTokenExpiration = undefined;  // Clear the token expiration
-//     await user.save();
-
-//     console.log('Password reset successful for user:', user.email);
-
-//     res.status(200).json({ message: 'Password reset successful' });
-//   } catch (error) {
-//     console.error('Error during password reset:', error);
-//     res.status(500).json({ message: 'Error resetting password.' });
-//   }
-
-//   console.log('Request body:', req.body);
-//   console.log('Token from URL:', resetToken);
-// });
-// Reset Password Route
 router.post('/reset-password/:resetToken', async (req, res) => {
   const { resetToken } = req.params;
   const { password } = req.body;
