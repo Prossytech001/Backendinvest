@@ -47,7 +47,25 @@ require("./cronJobs/dailyTasks"); // Import the cron jobs
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+const allowedOrigins = [
+  'https://cryptous-nu.vercel.app', // ✅ Your deployed frontend
+  'http://localhost:5173'           // ✅ For local development
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // allow requests with no origin (like Postman or mobile apps)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
+
 
 //  Import and use user routes
 const userRoutes = require("./routes/userRoutes");
@@ -81,6 +99,10 @@ app.use('/api/payments', paymentRoutes);
 const forgetRoutes = require('./routes/forgetPasswordRoutes')
 app.use('/api/auth', forgetRoutes)
 
+//history-Routes
+const historyRoutes = require('./routes/history')
+app.use('/api',historyRoutes )
+
 
 //Admin Routes
 
@@ -102,13 +124,21 @@ app.use('/api/admin/users', require('./routes/adminUsers'));
 const userActivityRoutes = require('./routes/activity');
 app.use('/api/activity', userActivityRoutes);
 
+// Admin Withdrawals Routes
+const adminWithdrawalsRoutes = require('./routes/adminWithdrawals');
+app.use('/api/admin/withdrawals', adminWithdrawalsRoutes);
 
-// app.get("/", (req, res) => {
-//   res.send("API is running...");
-// });
+//Admin deposite
+const adminDeposit = require('./routes/adminDeposit');
+app.use('/api/admin', adminDeposit);
+
+
+
+
 app.get("/", (req, res) => {
   res.send("app is running...");
 });
+
 
 
 mongoose.connect(process.env.MONGODB_URL, {

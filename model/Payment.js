@@ -6,8 +6,10 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     currency: { type: String, default: "usdt" },
     status: { type: String, enum: ['waiting', 'finished', 'failed'], default: 'waiting' },
-    paymentId: String,
-    payAddress: String,
+    paymentId: { type: String, unique: true },
+   payAddress: { type: String },
+    invoiceUrl: { type: String }, // ✅ Add this field
+
     transactionDetails: Object,
     receivedAt: { type: Date, default: Date.now },
   },
