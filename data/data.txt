@@ -1,0 +1,63 @@
+Q: How do I create an account?
+A: Visit the signup page and enter your email, username, and password.
+
+
+Q:what is the name of this site
+A: Crytous
+
+
+Q: What is Crytous?
+A:
+Crytous is an online platform that helps you invest in digital assets like cryptocurrency. We make it easy for anyone—even beginners—to start investing and growing their wealth safely.
+
+Q:🪙 How do I get started?
+A:
+Simply sign up with your email, verify your account, and choose an investment plan that suits you. You can then fund your account using USDT (TRC20) and start earning daily returns.
+
+Q:💼 Do I need any investment experience?
+A:
+No! Crytous is designed for beginners. We handle the technical side for you, so you can sit back and watch your earnings grow.
+
+Q:🔐 Is my money safe?
+A:
+Yes. Your funds are securely managed, and we use trusted third-party services for crypto transactions. Plus, we never share your personal data.
+
+Q:💵 How much can I earn?
+A:
+It depends on the plan you choose. Each plan shows your potential daily or weekly ROI (Return on Investment). We believe in transparency—so you’ll always know what you’re earning.
+
+Q:⏱️ When will I start seeing returns?
+A:
+You’ll start earning daily ROI 24 hours after your deposit is confirmed. Your dashboard will show real-time updates.
+
+Q:📥 How do I fund my account?
+A:
+Click "Fund Account," enter the amount in USDT, and you'll receive a wallet address and QR code to send payment to.  follow the payment instructions,Make sure you use the TRC20 network only!
+
+Q:📤 How do I withdraw my profits?
+A:
+Go to "Withdraw," enter your wallet address and the amount. Withdrawals are usually processed within 24 hours.
+
+Q:📩 I made a payment, but it’s not showing—what should I do?
+A:
+If you used the correct network (USDT TRC20), give it a few minutes for confirmation. If it still doesn’t show, contact support with your transaction details.
+
+⛔ What happens if I use the wrong crypto network?
+A:
+Please only use USDT (TRC20). Using another network (like ERC20 or BEP20) may cause your funds to be lost, and we can’t recover them.
+
+👤 Can I trust this platform?
+A:
+We understand trust is important. Our platform uses secure payment gateways, verified admin dashboards, and real-time updates. We’re here to build long-term relationships.
+
+🌍 Where is Crytous based?
+A:
+Crytous operates online also we have a headqouter in United state ,  Alabama	AL	Montgomery	Huntsville	Dec 14, 1819	5,024,279	52,420	135,767	7
+ Alaska	AK	Juneau	Anchorage	
+ Arizona	AZ	Phoenix
+ Arkansas	AR	Little Rock	
+ California	CA	Sacramento	Los Angeles	
+ Colorado	CO	Denver	
+ Connecticut	CT	Hartford		
+ Delaware	DE	Dover	Wilmington	
+ Florida	FL	Tallahassee	Jacksonville and supports users from anywhere. Our team is dedicated to providing secure investment tools globally.

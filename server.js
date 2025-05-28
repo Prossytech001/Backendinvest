@@ -40,7 +40,14 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("./cronJobs/dailyTasks"); // Import the cron jobs
+require("./cronJobs/dailyTasks");
+const axios = require("axios");
+
+
+const { OpenAI } = require("openai");
+
+
+ // Import the cron jobs
 
 
 
@@ -138,6 +145,12 @@ app.use('/api/admin', adminDeposit);
 app.get("/", (req, res) => {
   res.send("app is running...");
 });
+
+//chat ai
+
+
+const chatGemini = require("./routes/chatRoute");
+app.use("/api", chatGemini);
 
 
 

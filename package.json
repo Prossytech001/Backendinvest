@@ -13,6 +13,7 @@
   "dependencies": {
     "@adminjs/express": "^6.1.1",
     "@adminjs/mongoose": "^4.1.0",
+    "@google/generative-ai": "^0.24.1",
     "adminjs": "^7.8.15",
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
@@ -25,6 +26,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.14.3",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.10.0"
+    "nodemailer": "^6.10.0",
+    "openai": "^4.103.0"
   }
 }
