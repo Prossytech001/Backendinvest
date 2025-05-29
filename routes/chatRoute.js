@@ -81,43 +81,76 @@ const router = express.Router();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// router.post("/chat", async (req, res) => {
+//   try {
+//     const userMessage = req.body.message;
+//    const contextText = fs.readFileSync(path.resolve(__dirname, "../data/data.txt"), "utf8");
+//     const payload = {
+//       contents: [
+//         {
+//           parts: [
+//             {
+//               text: `You are a helpful assistant called Cryptous AI. Answer only using this information about Cryptous:\n${contextText}\n\nQuestion: ${userMessage}`
+//             }
+//           ]
+//         }
+//       ]
+//     };
+
+//     const geminiRes = await axios.post(
+//       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+//       payload,
+//       {
+//         headers: {
+//           "Content-Type": "application/json"
+//         }
+//       }
+//     );
+
+//     const reply = geminiRes.data.candidates[0]?.content?.parts[0]?.text || "No response.";
+//     res.json({ reply });
+
+//   } catch (err) {
+//     console.error("AI Error:", err.response?.data || err.message);
+//     res.status(500).json({
+//       error: "AI Error",
+//       details: err.response?.data || err.message,
+//     });
+//   }
+// });
 router.post("/chat", async (req, res) => {
   try {
     const userMessage = req.body.message;
+
     const contextText = fs.readFileSync(path.join(__dirname, "../data/data.txt"), "utf8");
 
     const payload = {
       contents: [
         {
+          role: "user",
           parts: [
             {
-              text: `You are a helpful assistant called Cryptous AI. Answer only using this information about Cryptous:\n${contextText}\n\nQuestion: ${userMessage}`
-            }
-          ]
-        }
-      ]
+              text: `You are a helpful assistant. Only answer using the following context:\n${contextText}\n\nQuestion: ${userMessage}`,
+            },
+          ],
+        },
+      ],
     };
 
     const geminiRes = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
+      payload
     );
 
     const reply = geminiRes.data.candidates[0]?.content?.parts[0]?.text || "No response.";
     res.json({ reply });
 
   } catch (err) {
-    console.error("AI Error:", err.response?.data || err.message);
-    res.status(500).json({
-      error: "AI Error",
-      details: err.response?.data || err.message,
-    });
+    console.error("🔥 AI Error:", err.message);
+    console.error("📦 AI Error Response:", err.response?.data || "No additional details");
+    res.status(500).json({ error: "AI Error", details: err.response?.data || err.message });
   }
 });
+
 
 module.exports = router;
