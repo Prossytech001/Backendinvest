@@ -34,24 +34,65 @@
 
 // module.exports = router;
 // backend/routes/chat.js or in your main server file
+// const express = require("express");
+// const fs = require("fs");
+// const router = express.Router();
+// const axios = require("axios");
+
+// const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Make sure this is in .env
+
+// router.post("/chat", async (req, res) => {
+//   try {
+//     const userMessage = req.body.message;
+//     const contextText = fs.readFileSync("data/data.txt", "utf8"); // Must exist!
+
+//     const payload = {
+//       contents: [
+//         {
+//         "role": "user",
+//           parts: [
+//             { text: `You are a helpful assistant called cryptous AI. only answer based on the following context:\n${contextText}\n\nQuestion: ${userMessage}` }
+//           ]
+//         }
+//       ]
+//     };
+
+//     const geminiRes = await axios.post(
+//       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+//       payload
+//     );
+
+//     const reply = geminiRes.data.candidates[0]?.content?.parts[0]?.text || "No response.";
+//     res.json({ reply });
+
+//   } catch (err) {
+//     console.error("AI Error:", err.response?.data || err.message);
+//     res.status(500).json({ error: "AI Error", details: err.message });
+//   }
+// });
+
+// module.exports = router;
+
 const express = require("express");
 const fs = require("fs");
-const router = express.Router();
+const path = require("path");
 const axios = require("axios");
+const router = express.Router();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Make sure this is in .env
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 router.post("/chat", async (req, res) => {
   try {
     const userMessage = req.body.message;
-    const contextText = fs.readFileSync("data/data.txt", "utf8"); // Must exist!
+    const contextText = fs.readFileSync(path.join(__dirname, "../data/data.txt"), "utf8");
 
     const payload = {
       contents: [
         {
-        "role": "user",
           parts: [
-            { text: `You are a helpful assistant called cryptous AI. only answer based on the following context:\n${contextText}\n\nQuestion: ${userMessage}` }
+            {
+              text: `You are a helpful assistant called Cryptous AI. Answer only using this information about Cryptous:\n${contextText}\n\nQuestion: ${userMessage}`
+            }
           ]
         }
       ]
@@ -59,7 +100,12 @@ router.post("/chat", async (req, res) => {
 
     const geminiRes = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      payload
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
     );
 
     const reply = geminiRes.data.candidates[0]?.content?.parts[0]?.text || "No response.";
@@ -67,9 +113,11 @@ router.post("/chat", async (req, res) => {
 
   } catch (err) {
     console.error("AI Error:", err.response?.data || err.message);
-    res.status(500).json({ error: "AI Error", details: err.message });
+    res.status(500).json({
+      error: "AI Error",
+      details: err.response?.data || err.message,
+    });
   }
 });
 
 module.exports = router;
-
