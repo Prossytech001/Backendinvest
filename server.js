@@ -42,13 +42,15 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("./cronJobs/dailyTasks");
 const axios = require("axios");
+const http = require("http");
+const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken"); // Needed for socket auth
 
 
-const { OpenAI } = require("openai");
+
 
 
  // Import the cron jobs
-
 
 
 
@@ -64,15 +66,25 @@ app.use(cors({
   origin: function (origin, callback) {
     // allow requests with no origin (like Postman or mobile apps)
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+     return callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+     return callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD', 'CONNECT', 'TRACE']
 }));
 
+
+const server = http.createServer(app); // use http server
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST'],
+  },
+});
+app.set("socketio", io);
 
 //  Import and use user routes
 const userRoutes = require("./routes/userRoutes");
@@ -109,6 +121,13 @@ app.use('/api/auth', forgetRoutes)
 //history-Routes
 const historyRoutes = require('./routes/history')
 app.use('/api',historyRoutes )
+
+//support chat route
+const chatLogRoutes = require('./routes/chatLog');
+app.use('/api', chatLogRoutes);
+
+
+
 
 
 //Admin Routes
@@ -152,6 +171,70 @@ app.get("/", (req, res) => {
 const chatGemini = require("./routes/chatRoute");
 app.use("/api", chatGemini);
 
+const ticketRoutes = require("./routes/supportTickets");
+app.use("/api/tickets", ticketRoutes);
+
+
+
+const notificationRoutes = require("./routes/notifications");
+app.use("/api/notifications", notificationRoutes);
+
+
+// ✅ SOCKET.IO AUTH + CHAT HANDLING
+let connectedUsers = {}; // userId: socketId
+let adminSocketId = null;
+
+io.on("connection", (socket) => {
+  console.log("🔌 A user connected", socket.id);
+
+  // Authenticate socket using JWT
+  socket.on("authenticate", (token) => {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+      connectedUsers[userId] = socket.id;
+      console.log(`✅ Authenticated User: ${userId}`);
+    } catch (err) {
+      console.log("❌ Invalid Token:", err.message);
+    }
+  });
+
+  // When user sends message to admin
+  socket.on("userMessage", ({ userId, message }) => {
+    if (adminSocketId) {
+      io.to(adminSocketId).emit("incomingUserMessage", { userId, message });
+    }
+  });
+
+  // When admin replies to user
+  socket.on("adminReply", ({ userId, reply }) => {
+    const userSocketId = connectedUsers[userId];
+    if (userSocketId) {
+      io.to(userSocketId).emit("adminReply", { reply });
+    }
+  });
+
+   socket.on("join", (userId) => {
+    socket.join(userId); // ✅ This makes io.to(userId) work
+    console.log(`✅ User ${userId} joined room ${userId}`);
+  });
+
+  // Register the admin
+  socket.on("registerAdmin", () => {
+    adminSocketId = socket.id;
+    console.log("👑 Admin registered:", adminSocketId);
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", () => {
+    console.log("❌ Disconnected:", socket.id);
+    if (socket.id === adminSocketId) adminSocketId = null;
+
+    for (const [id, sId] of Object.entries(connectedUsers)) {
+      if (sId === socket.id) delete connectedUsers[id];
+    }
+  });
+});
 
 
 mongoose.connect(process.env.MONGODB_URL, {
@@ -162,4 +245,9 @@ mongoose.connect(process.env.MONGODB_URL, {
 .catch(err => console.error(" MongoDB Connection Error:", err));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(` Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION 💥', err.message);
+  server.close(() => process.exit(1));
+});
