@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // Hashed password
   payments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Payment' }],
-  balance: { type: Number, default: 100 },
+  balance: { type: Number, default: 0 },
   stakes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Stake" }],
   totalEarnings: { type: Number, default: 0 },
   withdrawableBalance: { type: Number, default: 0 },
