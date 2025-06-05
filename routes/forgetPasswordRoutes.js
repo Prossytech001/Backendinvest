@@ -151,16 +151,45 @@ router.post('/forgot-password', async (req, res) => {
 
     // Send Reset Email with token (URL containing token)
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    console.log("Reset Link Sent:", resetLink);
+    // const mailOptions = {
+    //   from: process.env.EMAIL,
+    //   to: user.email,
+    //   subject: 'Password Reset Request',
+    //   html: `
+    //     <p>You requested a password reset</p>
+    //     <p>Click the link below to reset your password:</p>
+    //     <a href="${resetLink}">${resetLink}</a>
+    //   `
+    // };
     const mailOptions = {
-      from: process.env.EMAIL,
-      to: user.email,
-      subject: 'Password Reset Request',
-      html: `
-        <p>You requested a password reset</p>
-        <p>Click the link below to reset your password:</p>
-        <a href="${resetLink}">${resetLink}</a>
-      `
-    };
+  from: process.env.EMAIL,
+  to: user.email,
+  subject: "Reset Your Password",
+  html: `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; padding: 30px 0; font-family: Arial, sans-serif;">
+      <tr>
+        <td align="center">
+          <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; padding:30px; box-shadow:0 0 10px rgba(0,0,0,0.05);">
+            <tr>
+              <td style="text-align: center;">
+                <h2 style="color:#333;">Password Reset Request</h2>
+                <p style="font-size:16px; color:#555;">Hi there,</p>
+                <p style="font-size:15px; color:#555;">You recently requested to reset your password. Click the button below to reset it:</p>
+                <a href="${resetLink}" style="display:inline-block; margin:20px 0; padding:12px 24px; background-color:#007BFF; color:#ffffff; text-decoration:none; border-radius:5px; font-weight: bold;">Reset Password</a>
+                <p style="font-size:14px; color:#999;">If you didn't request this, you can safely ignore this email.</p>
+                <hr style="margin: 30px 0; border:none; border-top:1px solid #eee;">
+                <p style="font-size:12px; color:#ccc;">© ${new Date().getFullYear()} Cryptous Inc. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `,
+};
+
+
 
     await transporter.sendMail(mailOptions);
 
