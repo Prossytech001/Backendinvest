@@ -26,6 +26,39 @@
 
 
 //middleware/authMiddleware.js
+// 
+// const jwt = require("jsonwebtoken");
+// const User = require("../model/User");
+
+// const protect = async (req, res, next) => {
+//   console.log("Protect middleware triggered");
+
+//   const token = req.header("Authorization")?.replace("Bearer ", "");
+//   if (!token) {
+//     console.log("No token provided");
+//     return res.status(401).json({ message: "No token, authorization denied" });
+//   }
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     console.log("Decoded:", decoded);
+
+//     const user = await User.findById(decoded.id).select("-password");
+//     if (!user) {
+//       console.log("User not found");
+//       return res.status(401).json({ message: "User not found" });
+//     }
+
+//     req.user = user;
+//     next();
+//   } catch (error) {
+//     console.log("Error in protect middleware:", error.message);
+//     res.status(401).json({ message: "Invalid token" });
+//   }
+// };
+
+// module.exports = { protect };
+
 const jwt = require("jsonwebtoken");
 const User = require("../model/User");
 
@@ -40,10 +73,10 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded:", decoded);
+    console.log("Decoded:", decoded); // Should contain `id`, `email`, `role`
 
-    // Try getting the user fresh from DB
-    const user = await User.findById(decoded.userId).select("-password"); // Don't select password
+    const user = await User.findById(decoded.userId).select("-password"); // ✅ Use decoded.id
+
     if (!user) {
       console.log("User not found");
       return res.status(401).json({ message: "User not found" });
@@ -56,7 +89,6 @@ const protect = async (req, res, next) => {
     res.status(401).json({ message: "Invalid token" });
   }
 };
-
 
 module.exports = { protect };
 

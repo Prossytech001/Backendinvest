@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 const User = require("../model/User");
 const { route } = require("./adminRoutes");
 const Activity = require('../model/Activity'); // Make sure this is correct
+const { googleLogin } = require('../controllers/authController');
 
 
 const router = express.Router();
@@ -67,6 +68,9 @@ transporter.verify((error, success) => {
 //     res.status(500).json({ message: "Signup failed", error });
 //   }
 // });
+
+router.post('/google', googleLogin);
+
 router.post("/signup", async (req, res) => {
   try {
     const { username, email, password } = req.body;
