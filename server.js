@@ -156,7 +156,7 @@ app.use('/api/admin/withdrawals', adminWithdrawalsRoutes);
 
 //Admin deposite
 const adminDeposit = require('./routes/adminDeposit');
-app.use('/api/admin', adminDeposit);
+app.use('/api/admin', adminDeposit);;
 
 
 
@@ -174,6 +174,7 @@ app.use("/api", chatGemini);
 const ticketRoutes = require("./routes/supportTickets");
 app.use("/api/tickets", ticketRoutes);
 
+require("./cronJobs/dailyTasks"); // or wherever you save it
 
 
 const notificationRoutes = require("./routes/notifications");
