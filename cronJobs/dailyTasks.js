@@ -1,312 +1,437 @@
-// // cronJobs/dailyTasks.js
-// const cron = require("node-cron");
-// const Stake = require("../models/Stake");
-// const User = require("../models/User");
 
-// // Run once every day at midnight
-// cron.schedule("0 0 * * *", async () => {
-//   console.log("⏰ Running daily stake update...");
-
-//   try {
-//     const stakes = await Stake.find({});
-
-//     for (let stake of stakes) {
-//       const createdAt = new Date(stake.createdAt);
-//       const now = new Date();
-//       const daysPassed = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
-
-//       if (daysPassed < stake.durationDays) {
-//         const roi = stake.amount * stake.dailyROI;
-
-//         await User.findByIdAndUpdate(stake.user, {
-//           $inc: { balance: roi },
-//         });
-
-//         console.log(
-//           `Credited ROI of ${roi} to user ${stake.user} for stake ${stake._id}`
-//         );
-//       } else {
-//         console.log(`Stake ${stake._id} has matured.`);
-//         // You could optionally mark it as 'completed' in DB
-//       }
-//     }
-//   } catch (err) {
-//     console.error("Error in daily task:", err.message);
-//   }
-// });
-
+// export default dailyROIJob;
 // const cron = require("node-cron");
 // const Stake = require("../model/Stake");
 // const User = require("../model/User");
 
-// cron.schedule("* * * * *", async () => {
-//   console.log("⏰ Running daily ROI payout...");
-
+// // Run every day at 00:00
+// cron.schedule("0 0 * * *", async () => {
+//     console.log("Running cron job for daily ROI...");
 //   try {
 //     const activeStakes = await Stake.find({ isCompleted: false });
 
-//     for (let stake of activeStakes) {
-//       const createdAt = new Date(stake.createdAt);
-//       const now = new Date();
-//       const daysPassed = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
-
-//       if (daysPassed < stake.durationDays) {
-//         const roi = stake.amount * stake.dailyROI;
-
-//         await User.findByIdAndUpdate(stake.user, {
-//           $inc: { balance: roi },
-//         });
-
-//         console.log(`Credited ${roi} to user ${stake.user}`);
-//       }
-
-//       if (daysPassed >= stake.durationDays) {
-//         stake.isCompleted = true;
-//         await stake.save();
-//         console.log(`Stake ${stake._id} marked as completed.`);
-//       }
-//     }
-//   } catch (error) {
-//     console.error("Cron job error:", error.message);
-//   }
-// });
-// cron/roiJob.js
-// const cron = require("node-cron");
-// const Stake = require("../model/Stake");
-// const User = require("../model/User");
-
-// // Runs every day at midnight
-// cron.schedule("* * * * *", async () => {
-//   console.log("Running daily ROI job...");
-
-//   try {
-//     const activeStakes = await Stake.find({ status: "active" });
-
 //     for (const stake of activeStakes) {
-//       // Only process if the stake hasn't matured
-//       const start = new Date(stake.createdAt);
-//       const now = new Date();
-//       const daysPassed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+//       const today = new Date().toDateString();
+//       const lastClaim = new Date(stake.lastClaimDate || stake.startDate).toDateString();
 
-//       if (daysPassed < stake.durationDays) {
-//         const dailyROI = stake.amount * stake.dailyROI;
+//       // Prevent duplicate crediting
+//       if (today === lastClaim) continue;
 
-//         // Update user earnings
-//         await User.findByIdAndUpdate(stake.user, {
-//           $inc: { totalEarnings: dailyROI },
-//         });
-//       }
+//       const dailyEarning = (stake.amount * stake.dailyROI) / 100;
+//       const user = await User.findById(stake.user);
+//       if (!user) continue;
 
-//       // After maturity, move total earnings to withdrawable balance
-//       if (daysPassed === stake.durationDays) {
-//         const totalReturn = stake.amount * stake.dailyROI * stake.durationDays;
+//       // Add daily ROI
+//       stake.totalEarnings += dailyEarning;
+//       stake.earningsSoFar += dailyEarning;
+//       stake.lastClaimDate = new Date();
+//       stake.roiHistory.push({ date: new Date(), amount: dailyEarning });
 
-//         await User.findByIdAndUpdate(stake.user, {
-//           $inc: {
-//             withdrawableBalance: totalReturn,
-//           },
-//         });
-
-//         stake.status = "completed";
-//         await stake.save();
-//       }
-//     }
-
-//     console.log("ROI job completed.");
-//   } catch (error) {
-//     console.error("Error running ROI job:", error.message);
-//   }
-// });
-
-// cronJobs/stakeEarnings.js
-// const cron = require("node-cron");
-// const Stake = require("../model/Stake");
-// const User = require("../model/User");
-
-// // Runs every day at midnight
-// cron.schedule("0 0 * * *", async () => {
-//   console.log("🔁 Running daily staking ROI job...");
-
-//   try {
-//     const activeStakes = await Stake.find({ completed: false }).populate("user");
-
-//     for (const stake of activeStakes) {
-//       const { amount, dailyROI, durationDays, startDate, earnedSoFar, user } = stake;
-//       const now = new Date();
-//       const elapsedDays = Math.floor((now - new Date(startDate)) / (1000 * 60 * 60 * 24));
-
-//       // If already matured, mark complete and move earnings ONCE
-//       if (elapsedDays >= durationDays) {
-//         stake.completed = true;
-//         user.withdrawableBalance += stake.earnedSoFar;
-//         await stake.save();
-//         await user.save();
-//         continue; // skip the rest of the loop
-//       }
-
-//       // Otherwise, continue accumulating daily ROI
-//       const dailyEarning = amount * dailyROI;
-//       stake.earnedSoFar += dailyEarning;
 //       user.totalEarnings += dailyEarning;
 
+//       // Check if stake duration is over
+//       const endDate = new Date(stake.startDate);
+//       endDate.setDate(endDate.getDate() + stake.durationDays);
+
+//       if (new Date() >= endDate) {
+//         // Complete the stake
+//         stake.isCompleted = true;
+
+//         // Move to withdrawable balance
+//         user.withdrawableBalance += stake.totalEarnings;
+
+//         // Optional: log activity
+//         await new Activitys({
+//           user: user._id,
+//           type: 'Stake Completed',
+//           amount: stake.totalEarnings,
+//           description: `Plan completed. Earnings moved to withdrawable balance.`,
+//         }).save();
+//       }
+
 //       await stake.save();
 //       await user.save();
 //     }
 
-//     console.log("✅ Daily staking ROI job completed.");
+//     console.log("✅ Daily ROI processed successfully.");
 //   } catch (err) {
-//     console.error("❌ Error running staking ROI job:", err.message);
+//     console.error("❌ Error running daily ROI job:", err);
 //   }
+// });
+// const cron = require("node-cron");
+// const Stake = require("../model/Stake");
+// const User = require("../model/User");
+// const Activitys = require("../model/Activity"); // if you have an activity log
+
+// // Define the timezone
+// const TIME_ZONE = "Africa/Lagos";
+
+// // Helper function to format date in a timezone-safe way
+// const formatDate = (date) =>
+//   date.toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
+
+// // Run the cron job every day at 00:00 in Lagos time
+// cron.schedule(
+//   "* * * * *",
+//   async () => {
+//     console.log("Running daily ROI job...");
+
+//     try {
+//       const activeStakes = await Stake.find({ isCompleted: false });
+
+//       for (const stake of activeStakes) {
+//         const today = formatDate(new Date());
+//         const lastClaim = formatDate(
+//           stake.lastClaimDate ? new Date(stake.lastClaimDate) : new Date(stake.startDate)
+//         );
+
+//         if (today === lastClaim) continue; // Already processed for today
+
+//         const dailyEarning = (stake.amount * stake.dailyROI) / 100;
+
+//         const user = await User.findById(stake.user);
+//         if (!user) continue;
+
+//         // Update stake record
+//         stake.totalEarnings += dailyEarning;
+//         stake.earningsSoFar += dailyEarning;
+//         stake.lastClaimDate = new Date();
+//         stake.roiHistory.push({ date: new Date(), amount: dailyEarning });
+
+//         // Update user earnings
+//         user.totalEarnings += dailyEarning;
+
+//         // Check if staking duration has ended
+//         const endDate = new Date(stake.startDate);
+//         endDate.setDate(endDate.getDate() + stake.durationDays);
+
+//         if (new Date() >= endDate) {
+//           stake.isCompleted = true;
+//           user.withdrawableBalance += stake.totalEarnings;
+
+//           // Log activity
+//           await new Activitys({
+//             user: user._id,
+//             type: "Stake Completed",
+//             amount: stake.totalEarnings,
+//             description: "Plan completed. Earnings moved to withdrawable balance.",
+//           }).save();
+//         }
+
+//         await stake.save();
+//         await user.save();
+//       }
+
+//       console.log("✅ Daily ROI processed.");
+//     } catch (err) {
+//       console.error("❌ Error in daily ROI job:", err);
+//     }
+//   },
+//   {
+//     timezone: TIME_ZONE,
+//   }
+// );
+// const cron = require("node-cron");
+// const Stake = require("../model/Stake");
+// const User = require("../model/User");
+// const Activitys = require("../model/Activity");
+
+// const TIME_ZONE = "Africa/Lagos";
+
+// const formatDate = (date) =>
+//   date.toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
+
+// cron.schedule(
+//   "0 0 * * *", // Runs every day at 00:00
+//   async () => {
+//     console.log("Running daily ROI job...");
+
+//     try {
+//       const activeStakes = await Stake.find({ isCompleted: false });
+
+//       for (const stake of activeStakes) {
+//         const today = new Date();
+//         const todayFormatted = formatDate(today);
+//         const lastClaimFormatted = formatDate(
+//           stake.lastClaimDate ? new Date(stake.lastClaimDate) : new Date(stake.startDate)
+//         );
+
+//         if (todayFormatted === lastClaimFormatted) continue; // Already processed today
+
+//         const endDate = new Date(stake.startDate);
+//         endDate.setDate(endDate.getDate() + stake.durationDays);
+//         const isEndingToday = formatDate(endDate) === todayFormatted;
+
+//         const user = await User.findById(stake.user);
+//         if (!user) continue;
+
+//         if (isEndingToday) {
+//           // Finalize the stake without adding today's ROI again
+//           stake.isCompleted = true;
+//           user.withdrawableBalance += stake.totalEarnings;
+
+//           await new Activitys({
+//             user: user._id,
+//             type: "Stake Completed",
+//             amount: stake.totalEarnings,
+//             description: "Plan completed. Earnings moved to withdrawable balance.",
+//           }).save();
+
+//           await stake.save();
+//           await user.save();
+//           continue; // Skip adding ROI for the final day
+//         }
+
+//         // Add daily ROI
+//         const dailyEarning = (stake.amount * stake.dailyROI) / 100;
+//         stake.totalEarnings += dailyEarning;
+//         stake.earningsSoFar += dailyEarning;
+//         stake.lastClaimDate = today;
+//         stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+//         user.totalEarnings += dailyEarning;
+
+//         await stake.save();
+//         await user.save();
+//       }
+
+//       console.log("✅ Daily ROI processed.");
+//     } catch (err) {
+//       console.error("❌ Error in daily ROI job:", err);
+//     }
+//   },
+//   {
+//     timezone: TIME_ZONE,
+//   }
+// );
+// const cron = require("node-cron");
+// const Stake = require("../model/Stake");
+// const User = require("../model/User");
+// const mongoose = require("mongoose");
+
+// const TIME_ZONE = "Africa/Lagos"; // Or any valid TZ string
+// const IS_TEST_MODE = process.env.ROI_TEST_MODE === "true";
+
+// cron.schedule("* * * * *", async () => {
+//   try {
+//     console.log(`[${new Date().toISOString()}] Running ROI cron...`);
+
+//     const activeStakes = await Stake.find({ isCompleted: false });
+
+//     for (const stake of activeStakes) {
+//       const now = new Date();
+//       const lastClaim = new Date(stake.lastClaimDate || stake.startDate);
+//       const endDate = new Date(stake.startDate);
+
+//       // For testing, use minutes instead of days
+//       if (IS_TEST_MODE) {
+//         endDate.setMinutes(endDate.getMinutes() + stake.durationDays);
+//       } else {
+//         endDate.setDate(endDate.getDate() + stake.durationDays);
+//       }
+
+//       const isEndingToday = now.toISOString().slice(0, 16) === endDate.toISOString().slice(0, 16);
+//       const hasClaimedToday = lastClaim.toISOString().slice(0, 16) === now.toISOString().slice(0, 16);
+
+//       const roiToday = stake.amount * (stake.dailyROI / 100);
+
+//       if (isEndingToday) {
+//         if (!stake.isCompleted) {
+//           // Plan ends today: move all earnings and close
+//           stake.isCompleted = true;
+//           stake.endDate = endDate;
+//           stake.roiHistory.push({ date: now, amount: roiToday });
+//           stake.earningsSoFar += roiToday;
+//           stake.totalEarnings = stake.earningsSoFar;
+//           stake.lastClaimDate = now;
+
+//           const user = await User.findById(stake.user);
+//           user.withdrawableBalance += stake.totalEarnings;
+//           await user.save();
+
+//           await stake.save();
+//           console.log(`Stake ${stake._id} completed. Final ROI added.`);
+//         }
+//         continue; // Skip further ROI addition
+//       }
+
+//       if (!hasClaimedToday && now < endDate) {
+//         stake.roiHistory.push({ date: now, amount: roiToday });
+//         stake.earningsSoFar += roiToday;
+//         stake.totalEarnings = stake.earningsSoFar;
+//         stake.lastClaimDate = now;
+
+//         await stake.save();
+//         console.log(`Added ROI for stake ${stake._id}`);
+//       }
+//     }
+//   } catch (err) {
+//     console.error("Cron error:", err.message);
+//   }
+//   // === TEMP TESTING: Add ROI to user's balance instead of totalEarnings ===
+// // for (const stake of activeStakes) {
+// //   const user = await User.findById(stake.user);
+
+// //   const roiAmount = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+// //   user.balance += roiAmount;
+// //   await user.save();
+
+// //   console.log(`✅ Test: Added ROI ${roiAmount} to user ${user.username}'s balance`);
+// // }
+// // === END TESTING SECTION ===
+
+// }, {
+//   timezone: TIME_ZONE,
 // });
 
 // const cron = require("node-cron");
 // const Stake = require("../model/Stake");
 // const User = require("../model/User");
+// const Activitys = require("../model/Activity");
 
-// const TEST_MODE = true; // Toggle this to switch between testing and production
+// const TIME_ZONE = "Africa/Lagos";
 
-// cron.schedule("0 0 * * *", async () => {
-//   console.log("🔁 Running staking ROI job...");
+// const formatDate = (date) =>
+//   date.toLocaleDateString("en-CA", { timeZone: TIME_ZONE });
 
-//   try {
-//     const activeStakes = await Stake.find({ completed: false }).populate("user");
+// cron.schedule(
+//   "0 0 * * *", // Every day at midnight
+//   async () => {
+//     console.log("Running daily ROI job...");
 
-//     for (const stake of activeStakes) {
-//       const { amount, dailyROI, durationDays, startDate, user } = stake;
+//     try {
+//       const activeStakes = await Stake.find({ isCompleted: false });
 
-//       const now = new Date();
-//       const start = new Date(startDate);
+//       for (const stake of activeStakes) {
+//         const today = new Date();
+//         const todayFormatted = formatDate(today);
+//         const lastClaimFormatted = formatDate(
+//           stake.lastClaimDate ? new Date(stake.lastClaimDate) : new Date(stake.startDate)
+//         );
 
-//       const elapsed = TEST_MODE
-//         ? Math.floor((now - start) / (1000 * 60)) // minutes
-//         : Math.floor((now - start) / (1000 * 60 * 60 * 24)); // days
+//         if (todayFormatted === lastClaimFormatted) continue; // Already credited today
 
-//       const duration = TEST_MODE
-//         ? durationDays // simulate: 1 day = 1 minute
-//         : durationDays;
+//         const endDate = new Date(stake.startDate);
+//         endDate.setDate(endDate.getDate() + stake.durationDays);
+//         const isEndingToday = formatDate(endDate) === todayFormatted;
 
-//       if (elapsed >= duration) {
-//         stake.completed = true;
-//         user.withdrawableBalance += stake.earnedSoFar;
+//         const user = await User.findById(stake.user);
+//         if (!user) continue;
+
+//         // Calculate today's earning
+//         const dailyEarning = (stake.amount * stake.dailyROI) / 100;
+
+//         // Apply today's ROI
+//         stake.totalEarnings += dailyEarning;
+//         stake.earningsSoFar += dailyEarning;
+//         stake.lastClaimDate = today;
+//         stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+//         user.totalEarnings += dailyEarning;
+
+//         // Defensive checks before ROI calculation
+// if (
+//   typeof stake.amount !== "number" || isNaN(stake.amount) ||
+//   typeof stake.dailyROI !== "number" || isNaN(stake.dailyROI)
+// ) {
+//   console.warn(`❌ Invalid stake values for stake ${stake._id}. Skipping.`);
+//   continue;
+// }
+
+
+//         // If plan ends today, mark as completed and transfer to withdrawableBalance
+//         if (isEndingToday) {
+//           stake.isCompleted = true;
+//           user.withdrawableBalance += stake.totalEarnings;
+
+//           await new Activitys({
+//             user: user._id,
+//             type: "Stake Completed",
+//             amount: stake.totalEarnings,
+//             description: "Plan completed. Earnings moved to withdrawable balance.",
+//           }).save();
+//         }
+
 //         await stake.save();
 //         await user.save();
-//         continue;
 //       }
 
-//       const earning = amount * dailyROI; // simulate full daily earning
-
-//       stake.earnedSoFar += earning;
-//       user.totalEarnings += earning;
-
-//       await stake.save();
-//       await user.save();
-
-//       console.log(`🟢 Updated ${user.email}: +$${earning.toFixed(2)}`);
+//       console.log("✅ Daily ROI processed.");
+//     } catch (err) {
+//       console.error("❌ Error in daily ROI job:", err);
 //     }
-
-//     console.log("✅ ROI job done.");
-//   } catch (err) {
-//     console.error("❌ Error:", err.message);
+//   },
+//   {
+//     timezone: TIME_ZONE,
 //   }
-// });
+// );
+const cron = require('node-cron');
+const Stake = require('../model/Stake');
+const User = require('../model/User');
+const mongoose = require('mongoose');
 
+cron.schedule('0 0 * * *', async () => {
+  console.log('🟢 Running daily ROI cron job');
 
-// import cron from "node-cron";
-// import Stake from "../model/Stake.js";
-// import User from "../model/User.js";
-
-// const dailyROIJob = cron.schedule("0 0 * * *", async () => {
-//   console.log("⏰ Running daily ROI distribution...");
-
-//   const activeStakes = await Stake.find({ isCompleted: false });
-
-//   for (const stake of activeStakes) {
-//     const user = await User.findById(stake.user);
-//     if (!user) continue;
-
-//     // Calculate days passed
-//     const startDate = new Date(stake.startDate);
-//     const today = new Date();
-//     const daysPassed = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
-
-//     // Check if staking duration is over
-//     if (daysPassed >= stake.durationDays) {
-//       // Move full ROI to withdrawableBalance
-//       user.withdrawableBalance += stake.earningsSoFar;
-//       stake.isCompleted = true;
-//       await stake.save();
-//       await user.save();
-//       continue;
-//     }
-
-//     // Credit daily ROI
-//     const dailyEarning = stake.amount * stake.dailyROI / 100;
-//     stake.earningsSoFar += dailyEarning;
-//     user.totalEarnings += dailyEarning;
-
-//     await stake.save();
-//     await user.save();
-//   }
-
-//   console.log("✅ Daily ROI processing completed");
-// });
-
-// export default dailyROIJob;
-const cron = require("node-cron");
-const Stake = require("../model/Stake");
-const User = require("../model/Stake");
-
-// Run every day at 00:00
-cron.schedule("0 0 * * *", async () => {
-    console.log("Running cron job for daily ROI...");
   try {
-    const activeStakes = await Stake.find({ isCompleted: false });
+    const stakes = await Stake.find({ isCompleted: false }).populate('user');
 
-    for (const stake of activeStakes) {
-      const today = new Date().toDateString();
-      const lastClaim = new Date(stake.lastClaimDate || stake.startDate).toDateString();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // Prevent duplicate crediting
-      if (today === lastClaim) continue;
+    for (const stake of stakes) {
+      const user = stake.user;
 
-      const dailyEarning = (stake.amount * stake.dailyROI) / 100;
-      const user = await User.findById(stake.user);
-      if (!user) continue;
-
-      // Add daily ROI
-      stake.totalEarnings += dailyEarning;
-      stake.earningsSoFar += dailyEarning;
-      stake.lastClaimDate = new Date();
-      stake.roiHistory.push({ date: new Date(), amount: dailyEarning });
-
-      user.totalEarnings += dailyEarning;
-
-      // Check if stake duration is over
-      const endDate = new Date(stake.startDate);
-      endDate.setDate(endDate.getDate() + stake.durationDays);
-
-      if (new Date() >= endDate) {
-        // Complete the stake
-        stake.isCompleted = true;
-
-        // Move to withdrawable balance
-        user.withdrawableBalance += stake.totalEarnings;
-
-        // Optional: log activity
-        await new Activitys({
-          user: user._id,
-          type: 'Stake Completed',
-          amount: stake.totalEarnings,
-          description: `Plan completed. Earnings moved to withdrawable balance.`,
-        }).save();
+      if (!user) {
+        console.warn(`⚠️ Stake ${stake._id} has no associated user`);
+        continue;
       }
 
-      await stake.save();
-      await user.save();
-    }
+      // Defensive checks
+      if (
+        typeof stake.amount !== 'number' || isNaN(stake.amount) ||
+        typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
+      ) {
+        console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+        continue;
+      }
 
-    console.log("✅ Daily ROI processed successfully.");
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+
+        // Update stake earnings
+        stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
+        stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
+        stake.lastClaimDate = today;
+        stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+        // Update user earnings
+        user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
+
+        // Check if the stake has matured
+        const now = new Date();
+        const endDate = new Date(stake.endDate);
+        if (now >= endDate && !stake.isCompleted) {
+          stake.isCompleted = true;
+          user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
+        }
+
+        await stake.save({ session });
+        await user.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
+      } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
+      }
+    }
   } catch (err) {
-    console.error("❌ Error running daily ROI job:", err);
+    console.error('❌ Error in ROI cron job:', err);
   }
 });
