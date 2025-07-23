@@ -1,4 +1,4 @@
-const Plan = require("../model/Plan"); // import Plan model at the top
+const Plan = require("../model/Plan"); 
 const express = require('express');
 const router = express.Router();
 

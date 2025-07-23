@@ -13,6 +13,8 @@ const { googleLogin } = require('../controllers/authController');
 
 const router = express.Router();
 
+const generateReferralCode = require('../utils/referral');
+
 // ✅ Nodemailer setup
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -71,19 +73,34 @@ transporter.verify((error, success) => {
 
 router.post('/google', googleLogin);
 
+
 router.post("/signup", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password ,referralCode: referredCode} = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
+    // Check if referredCode exists and fetch the referring user
+    let referredByUser = null;
+    if (referredCode) {
+  referredByUser = await User.findOne({ referralCode: referredCode });
+  if (!referredByUser) {
+    return res.status(400).json({ message: "Invalid referral code" });
+  }
+}
+
+
     const hashedPassword = await bcrypt.hash(password, 10);
+
 
     const newUser = await User.create({
       username,
       email,
       password: hashedPassword,
+     referralCode: await generateReferralCode(),
+
+      referredBy: referredByUser ? referredByUser._id : null,
     });
 
     // 🔥 Log signup activity
@@ -104,6 +121,7 @@ router.post("/signup", async (req, res) => {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
+        referralLink: `${process.env.FRONTEND_URL}/signup?ref=${newUser.referralCode}`,
       },
     });
   } catch (error) {
