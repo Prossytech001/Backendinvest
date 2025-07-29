@@ -74,40 +74,100 @@ transporter.verify((error, success) => {
 router.post('/google', googleLogin);
 
 
+// router.post("/signup", async (req, res) => {
+//   try {
+//     const { username, email, password ,referralCode: referredCode} = req.body;
+
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) return res.status(400).json({ message: "User already exists" });
+
+//     // Check if referredCode exists and fetch the referring user
+//     let referredByUser = null;
+//     if (referredCode) {
+//   referredByUser = await User.findOne({ referralCode: referredCode });
+//   if (!referredByUser) {
+//     return res.status(400).json({ message: "Invalid referral code" });
+//   }
+// }
+
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+
+//     const newUser = await User.create({
+//       username,
+//       email,
+//       password: hashedPassword,
+//      referralCode: await generateReferralCode(),
+
+//       referredBy: referredByUser ? referredByUser._id : null,
+//     });
+
+//     // 🔥 Log signup activity
+//     await Activity.create({
+//       userId: newUser._id,
+//       type: 'signup',
+//       description: `${newUser.username} signed up`
+//     });
+
+//     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, {
+//       expiresIn: "1d",
+//     });
+
+//     res.status(201).json({
+//       message: "Signup successful",
+//       token,
+//       user: {
+//         id: newUser._id,
+//         username: newUser.username,
+//         email: newUser.email,
+//         referralLink: `${process.env.FRONTEND_URL}/signup?ref=${newUser.referralCode}`,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Signup Error:", error);
+//     res.status(500).json({ message: "Signup failed", error });
+//   }
+// });
 router.post("/signup", async (req, res) => {
   try {
-    const { username, email, password ,referralCode: referredCode} = req.body;
+    const { username, email, password, referralCode } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-    // Check if referredCode exists and fetch the referring user
     let referredByUser = null;
-    if (referredCode) {
-  referredByUser = await User.findOne({ referralCode: referredCode });
+     if (referralCode) {
+  referredByUser = await User.findOne({ referralCode });
   if (!referredByUser) {
     return res.status(400).json({ message: "Invalid referral code" });
   }
 }
 
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
 
     const newUser = await User.create({
       username,
       email,
       password: hashedPassword,
-     referralCode: await generateReferralCode(),
-
+      referralCode: await generateReferralCode(),
       referredBy: referredByUser ? referredByUser._id : null,
     });
+
+    // 🟢 Update reward details for the referring user
+    if (referredByUser) {
+  referredByUser.totalReward = (referredByUser.totalReward || 0) + 50;
+  referredByUser.referredUsers = referredByUser.referredUsers || [];
+  referredByUser.referredUsers.push(newUser._id);
+  await referredByUser.save();
+}
+
 
     // 🔥 Log signup activity
     await Activity.create({
       userId: newUser._id,
       type: 'signup',
-      description: `${newUser.username} signed up`
+      description: `${newUser.username} signed up`,
     });
 
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, {

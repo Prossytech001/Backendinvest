@@ -126,6 +126,10 @@ app.use('/api',historyRoutes )
 const chatLogRoutes = require('./routes/chatLog');
 app.use('/api', chatLogRoutes);
 
+//reward
+const reward = require('./routes/reward')
+app.use('/api/users', reward)
+
 
 
 
