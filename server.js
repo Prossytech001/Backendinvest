@@ -162,12 +162,23 @@ app.use('/api/admin/withdrawals', adminWithdrawalsRoutes);
 const adminDeposit = require('./routes/adminDeposit');
 app.use('/api/admin', adminDeposit);;
 
+const trackRoutes = require('./routes/track');
+app.use('/api', trackRoutes);
 
 
 
 app.get("/", (req, res) => {
   res.send("app is running...");
 });
+
+
+const planRoute = require("./routes/adminPlan");
+app.use("/api/plans", planRoute);
+
+const emailRoutes = require("./routes/email");
+app.use("/api", emailRoutes);
+
+
 
 //chat ai
 
