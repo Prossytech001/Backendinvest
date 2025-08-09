@@ -50,6 +50,7 @@ const jwt = require("jsonwebtoken"); // Needed for socket auth
 
 
 
+
  // Import the cron jobs
 
 
@@ -85,6 +86,9 @@ const io = new Server(server, {
   },
 });
 app.set("socketio", io);
+
+app.set('trust proxy', true);
+
 
 //  Import and use user routes
 const userRoutes = require("./routes/userRoutes");
@@ -129,6 +133,8 @@ app.use('/api', chatLogRoutes);
 //reward
 const reward = require('./routes/reward')
 app.use('/api/users', reward)
+
+app.use('/api/email-only', require('./routes/email-only'));
 
 
 
