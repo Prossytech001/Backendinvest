@@ -45,6 +45,7 @@ const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken"); // Needed for socket auth
+const bodyParser = require('body-parser');
 
 
 
@@ -56,12 +57,15 @@ const jwt = require("jsonwebtoken"); // Needed for socket auth
 
 
 const app = express();
-app.use(express.json());
+
 // app.use(cors());
 const allowedOrigins = [
   'https://cryptous-nu.vercel.app', // ✅ Your deployed frontend
   'http://localhost:5173'           // ✅ For local development
 ];
+
+
+
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -89,6 +93,18 @@ app.set("socketio", io);
 
 app.set('trust proxy', true);
 
+app.use('/api/payments/ipn', bodyParser.raw({ type: '*/*', verify: (req, _res, buf) => {
+  req.rawBody = buf.toString('utf8');
+}}));
+
+
+
+// ✅ JSON parsing for everything else
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString('utf8'); // still sets rawBody for debugging if needed
+  }
+}));
 
 //  Import and use user routes
 const userRoutes = require("./routes/userRoutes");
@@ -118,6 +134,8 @@ app.use('/api', contactRoute);
 //payment-Routes
 const paymentRoutes = require('./routes/paymentRoutes');
 app.use('/api/payments', paymentRoutes);
+
+
 
 const forgetRoutes = require('./routes/forgetPasswordRoutes')
 app.use('/api/auth', forgetRoutes)

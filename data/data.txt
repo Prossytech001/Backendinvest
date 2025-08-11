@@ -3,12 +3,12 @@ A: Visit the signup page and enter your email, username, and password.
 
 
 Q:what is the name of this site
-A: Crytous
+A: CrytoFlux
 
 
-Q: What is Crytous?
+Q: What is CrytoFlux?
 A:
-Crytous is an online platform that helps you invest in digital assets like cryptocurrency. We make it easy for anyone—even beginners—to start investing and growing their wealth safely.
+CrytoFlux is an online platform that helps you invest in digital assets like cryptocurrency. We make it easy for anyone—even beginners—to start investing and growing their wealth safely.
 
 Q:🪙 How do I get started?
 A:
@@ -16,7 +16,7 @@ Simply sign up with your email, verify your account, and choose an investment pl
 
 Q:💼 Do I need any investment experience?
 A:
-No! Crytous is designed for beginners. We handle the technical side for you, so you can sit back and watch your earnings grow.
+No! CrytoFlux is designed for beginners. We handle the technical side for you, so you can sit back and watch your earnings grow.
 
 Q:🔐 Is my money safe?
 A:
@@ -50,9 +50,9 @@ Please only use USDT (TRC20). Using another network (like ERC20 or BEP20) may ca
 A:
 We understand trust is important. Our platform uses secure payment gateways, verified admin dashboards, and real-time updates. We’re here to build long-term relationships.
 
-🌍 Where is Crytous based?
+🌍 Where is CrytoFlux based?
 A:
-Crytous operates online also we have a headqouter in United state ,  Alabama	AL	Montgomery	Huntsville	Dec 14, 1819	5,024,279	52,420	135,767	7
+CrytoFlux operates online also we have a headqouter in United state ,  Alabama	AL	Montgomery	Huntsville	Dec 14, 1819	5,024,279	52,420	135,767	7
  Alaska	AK	Juneau	Anchorage	
  Arizona	AZ	Phoenix
  Arkansas	AR	Little Rock	

@@ -36,5 +36,30 @@ router.get('/reward', protect, async (req, res) => {
   }
 });
 
+router.post('/convert-reward', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id); // req.user.id from JWT
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (user.totalReward <= 0) {
+      return res.status(400).json({ message: 'No rewards to convert' });
+    }
+
+    // Add rewards to balance & reset rewards
+    user.balance += user.totalReward;
+    user.totalReward = 0;
+    await user.save();
+
+    res.json({
+      message: 'Rewards converted successfully',
+      balance: user.balance,
+      totalReward: user.totalReward
+    });
+  } catch (error) {
+    console.error('Convert reward error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 module.exports = router;
