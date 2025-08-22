@@ -435,65 +435,174 @@
 //     console.error('❌ Error in ROI cron job:', err);
 //   }
 // });
+// const cron = require('node-cron');
+// const Stake = require('../model/Stake');
+// const User = require('../model/User');
+// const mongoose = require('mongoose');
+
+// cron.schedule('0 0 * * *', async () => {
+//   console.log('🟢 Running daily ROI cron job (Africa/Lagos midnight)');
+
+//   try {
+//     const stakes = await Stake.find({ isCompleted: false }).populate('user');
+//     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+//     for (const stake of stakes) {
+//       const user = stake.user;
+
+//       if (!user) {
+//         console.warn(`⚠️ Stake ${stake._id} has no associated user`);
+//         continue;
+//       }
+
+//       // Defensive checks
+//       if (
+//         typeof stake.amount !== 'number' || isNaN(stake.amount) ||
+//         typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
+//       ) {
+//         console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+//         continue;
+//       }
+
+//       const session = await mongoose.startSession();
+//       session.startTransaction();
+
+//       try {
+//         const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+
+//         // Update stake earnings
+//         stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
+//         stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
+//         stake.lastClaimDate = today;
+//         stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+//         // Update user earnings
+//         user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
+
+//         // Check if the stake has matured
+//         const now = new Date();
+//         const endDate = new Date(stake.endDate);
+//         if (now >= endDate && !stake.isCompleted) {
+//           stake.isCompleted = true;
+//           user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
+//         }
+
+//         await stake.save({ session });
+//         await user.save({ session });
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
+//       } catch (err) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
+//       }
+//     }
+//   } catch (err) {
+//     console.error('❌ Error in ROI cron job:', err);
+//   }
+// }, {
+//   timezone: 'Africa/Lagos'   // 🔹 ensures job runs at Lagos midnight
+// });
 const cron = require('node-cron');
 const Stake = require('../model/Stake');
 const User = require('../model/User');
 const mongoose = require('mongoose');
 
+// --- Helpers ---
+function lagosDate(d = new Date()) {
+  // Returns YYYY-MM-DD in Africa/Lagos
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return fmt.format(d); // en-CA gives YYYY-MM-DD
+}
+function daysBetween(startStr, endStr) {
+  // startStr/endStr are YYYY-MM-DD in Lagos time
+  const [sy, sm, sd] = startStr.split('-').map(Number);
+  const [ey, em, ed] = endStr.split('-').map(Number);
+  const s = Date.UTC(sy, sm - 1, sd);
+  const e = Date.UTC(ey, em - 1, ed);
+  return Math.max(0, Math.round((e - s) / 86400000));
+}
+function addDaysISO(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
+// --- The cron (fires at Lagos midnight) ---
 cron.schedule('0 0 * * *', async () => {
-  console.log('🟢 Running daily ROI cron job (Africa/Lagos midnight)');
+  console.log('🟢 Running daily ROI cron job (Africa/Lagos midnight)', new Date().toISOString());
 
   try {
     const stakes = await Stake.find({ isCompleted: false }).populate('user');
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+    const todayLagos = lagosDate();                 // e.g., 2025-08-22 (Lagos calendar)
     for (const stake of stakes) {
       const user = stake.user;
-
-      if (!user) {
-        console.warn(`⚠️ Stake ${stake._id} has no associated user`);
-        continue;
-      }
+      if (!user) { console.warn(`⚠️ Stake ${stake._id} has no user`); continue; }
 
       // Defensive checks
       if (
         typeof stake.amount !== 'number' || isNaN(stake.amount) ||
         typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
-      ) {
-        console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+      ) { console.warn(`⚠️ Invalid stake data ${stake._id}`); continue; }
+
+      // Determine the last day we credited (Lagos calendar)
+      // Prefer your own stake.startDate field if you have one; else fallback to createdAt
+      const startBase = stake.startDate ? lagosDate(new Date(stake.startDate)) : lagosDate(new Date(stake.createdAt));
+      const lastCredited = stake.lastClaimDate || null;
+
+      // First day eligible to credit:
+      //  - If never credited: the day AFTER the start day
+      //  - Else: the day AFTER the last credited day
+      const firstUnpaidDay = lastCredited ? addDaysISO(lastCredited, 1) : addDaysISO(startBase, 1);
+
+      // Don’t go past endDate (use Lagos calendar for end bound)
+      const endDateISO = stake.endDate ? lagosDate(new Date(stake.endDate)) : null;
+      const finalCreditDay =
+        endDateISO && endDateISO < todayLagos ? endDateISO : todayLagos;
+
+      // How many whole days to credit?
+      const creditDays = daysBetween(firstUnpaidDay, finalCreditDay) + (firstUnpaidDay <= finalCreditDay ? 1 : 0);
+      if (creditDays <= 0) {
+        // nothing to do for this stake today
         continue;
       }
 
       const session = await mongoose.startSession();
       session.startTransaction();
-
       try {
         const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+        const totalToCredit = parseFloat((dailyEarning * creditDays).toFixed(2));
 
-        // Update stake earnings
-        stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
-        stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
-        stake.lastClaimDate = today;
-        stake.roiHistory.push({ date: today, amount: dailyEarning });
+        // Push each day into roiHistory and advance lastClaimDate
+        for (let i = 0; i < creditDays; i++) {
+          const dayISO = addDaysISO(firstUnpaidDay, i);
+          stake.roiHistory.push({ date: dayISO, amount: dailyEarning });
+        }
+        stake.totalEarnings = (stake.totalEarnings || 0) + totalToCredit;
+        stake.earningsSoFar = (stake.earningsSoFar || 0) + totalToCredit;
+        stake.lastClaimDate = addDaysISO(firstUnpaidDay, creditDays - 1);
 
-        // Update user earnings
-        user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
+        user.totalEarnings = (user.totalEarnings || 0) + totalToCredit;
 
-        // Check if the stake has matured
+        // Maturity check (use real Date compare)
         const now = new Date();
-        const endDate = new Date(stake.endDate);
-        if (now >= endDate && !stake.isCompleted) {
+        const endDate = stake.endDate ? new Date(stake.endDate) : null;
+        if (endDate && now >= endDate && !stake.isCompleted) {
           stake.isCompleted = true;
-          user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
+          user.withdrawableBalance = (user.withdrawableBalance || 0) + (stake.totalEarnings || 0);
         }
 
         await stake.save({ session });
         await user.save({ session });
-
         await session.commitTransaction();
         session.endSession();
 
-        console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
+        console.log(`✅ Credited ${creditDays} day(s) for stake ${stake._id} (₦${totalToCredit}) user=${user.email}`);
       } catch (err) {
         await session.abortTransaction();
         session.endSession();
@@ -504,6 +613,6 @@ cron.schedule('0 0 * * *', async () => {
     console.error('❌ Error in ROI cron job:', err);
   }
 }, {
-  timezone: 'Africa/Lagos'   // 🔹 ensures job runs at Lagos midnight
+  timezone: 'Africa/Lagos'
 });
 
