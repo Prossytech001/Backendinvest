@@ -365,73 +365,428 @@
 //     timezone: TIME_ZONE,
 //   }
 // );
+// const cron = require('node-cron');
+// const Stake = require('../model/Stake');
+// const User = require('../model/User');
+// const mongoose = require('mongoose');
+
+// cron.schedule('0 0 * * *', async () => {
+//   console.log('🟢 Running daily ROI cron job');
+
+//   try {
+//     const stakes = await Stake.find({ isCompleted: false }).populate('user');
+
+//     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+//     for (const stake of stakes) {
+//       const user = stake.user;
+
+//       if (!user) {
+//         console.warn(`⚠️ Stake ${stake._id} has no associated user`);
+//         continue;
+//       }
+
+//       // Defensive checks
+//       if (
+//         typeof stake.amount !== 'number' || isNaN(stake.amount) ||
+//         typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
+//       ) {
+//         console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+//         continue;
+//       }
+
+//       const session = await mongoose.startSession();
+//       session.startTransaction();
+
+//       try {
+//         const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+
+//         // Update stake earnings
+//         stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
+//         stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
+//         stake.lastClaimDate = today;
+//         stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+//         // Update user earnings
+//         user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
+
+//         // Check if the stake has matured
+//         const now = new Date();
+//         const endDate = new Date(stake.endDate);
+//         if (now >= endDate && !stake.isCompleted) {
+//           stake.isCompleted = true;
+//           user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
+//         }
+
+//         await stake.save({ session });
+//         await user.save({ session });
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
+//       } catch (err) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
+//       }
+//     }
+//   } catch (err) {
+//     console.error('❌ Error in ROI cron job:', err);
+//   }
+// });
+// const cron = require('node-cron');
+// const Stake = require('../model/Stake');
+// const User = require('../model/User');
+// const mongoose = require('mongoose');
+
+// cron.schedule('0 0 * * *', async () => {
+//   console.log('🟢 Running daily ROI cron job (Africa/Lagos midnight)');
+
+//   try {
+//     const stakes = await Stake.find({ isCompleted: false }).populate('user');
+//     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+//     for (const stake of stakes) {
+//       const user = stake.user;
+
+//       if (!user) {
+//         console.warn(`⚠️ Stake ${stake._id} has no associated user`);
+//         continue;
+//       }
+
+//       // Defensive checks
+//       if (
+//         typeof stake.amount !== 'number' || isNaN(stake.amount) ||
+//         typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
+//       ) {
+//         console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+//         continue;
+//       }
+
+//       const session = await mongoose.startSession();
+//       session.startTransaction();
+
+//       try {
+//         const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+
+//         // Update stake earnings
+//         stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
+//         stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
+//         stake.lastClaimDate = today;
+//         stake.roiHistory.push({ date: today, amount: dailyEarning });
+
+//         // Update user earnings
+//         user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
+
+//         // Check if the stake has matured
+//         const now = new Date();
+//         const endDate = new Date(stake.endDate);
+//         if (now >= endDate && !stake.isCompleted) {
+//           stake.isCompleted = true;
+//           user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
+//         }
+
+//         await stake.save({ session });
+//         await user.save({ session });
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
+//       } catch (err) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
+//       }
+//     }
+//   } catch (err) {
+//     console.error('❌ Error in ROI cron job:', err);
+//   }
+// }, {
+//   timezone: 'Africa/Lagos'   // 🔹 ensures job runs at Lagos midnight
+// });
+// const cron = require('node-cron');
+// const Stake = require('../model/Stake');
+// const User = require('../model/User');
+// const mongoose = require('mongoose');
+
+// const TZ = 'Africa/Lagos';
+// const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// // --- helpers ---
+// function ymdInTZ(date = new Date(), tz = TZ) {
+//   // "YYYY-MM-DD" for a given timezone
+//   return new Intl.DateTimeFormat('en-CA', {
+//     timeZone: tz,
+//     year: 'numeric',
+//     month: '2-digit',
+//     day: '2-digit',
+//   }).format(date);
+// }
+// function utcFromYmd(ymd) {
+//   const [y, m, d] = ymd.split('-').map(Number);
+//   return Date.UTC(y, m - 1, d);
+// }
+// function daysDiffYmd(aYmd, bYmd) {
+//   return Math.floor((utcFromYmd(bYmd) - utcFromYmd(aYmd)) / ONE_DAY_MS);
+// }
+// function minYmd(a, b) {
+//   return utcFromYmd(a) <= utcFromYmd(b) ? a : b;
+// }
+// function maxYmd(a, b) {
+//   return utcFromYmd(a) >= utcFromYmd(b) ? a : b;
+// }
+
+// cron.schedule('0 0 * * * ', async () => {
+//   console.log('🟢 Running daily ROI cron job (Africa/Lagos midnight)');
+
+//   try {
+//     // only active stakes
+//     const stakes = await Stake.find({ isCompleted: false }).populate('user');
+//     const todayYmd = ymdInTZ(new Date(), TZ); // ✅ TZ-safe day (YYYY-MM-DD)
+
+//     for (const stake of stakes) {
+//       const user = stake.user;
+//       if (!user) {
+//         console.warn(`⚠️ Stake ${stake._id} has no associated user`);
+//         continue;
+//       }
+//       if (
+//         typeof stake.amount !== 'number' || isNaN(stake.amount) ||
+//         typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
+//       ) {
+//         console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
+//         continue;
+//       }
+
+//       const session = await mongoose.startSession();
+//       session.startTransaction();
+
+//       try {
+//         // ---------- owed-days calculation ----------
+//         const startYmd = ymdInTZ(stake.startDate || stake.createdAt || stake.startedAt || stake._id.getTimestamp(), TZ);
+//         const lastYmd = stake.lastClaimDate || startYmd;
+
+//         // if endDate exists, cap the pay-until day to endYmd
+//         const endYmd = stake.endDate ? ymdInTZ(stake.endDate, TZ) : null;
+//         const payUntilYmd = endYmd ? minYmd(todayYmd, endYmd) : todayYmd;
+
+//         // how many full days are owed since last claim (exclusive of lastYmd, inclusive of payUntilYmd)
+//         let owedDays = daysDiffYmd(lastYmd, payUntilYmd);
+//         if (owedDays <= 0) {
+//           await session.commitTransaction();
+//           session.endSession();
+//           continue; // nothing to pay today (already paid or starts today)
+//         }
+
+//         // ---------- payout ----------
+//         const roiPerDay = Number(((stake.amount * stake.dailyROI) / 100).toFixed(2));
+//         const payout = Number((roiPerDay * owedDays).toFixed(2));
+
+//         // ensure arrays exist
+//         if (!Array.isArray(stake.roiHistory)) stake.roiHistory = [];
+
+//         // update stake
+//         stake.totalEarnings = Number(((stake.totalEarnings || 0) + payout).toFixed(2));
+//         stake.earningsSoFar = Number(((stake.earningsSoFar || 0) + payout).toFixed(2));
+//         stake.lastClaimDate = payUntilYmd;
+//         // you can record a single aggregated entry; or push daily entries if you prefer
+//         stake.roiHistory.push({ date: payUntilYmd, amount: payout, days: owedDays });
+
+//         // update user aggregate
+//         user.totalEarnings = Number(((user.totalEarnings || 0) + payout).toFixed(2));
+
+//         // completion check (after paying up to end date)
+//         let justCompleted = false;
+//         if (endYmd && maxYmd(payUntilYmd, endYmd) === endYmd && payUntilYmd === endYmd && !stake.isCompleted) {
+//           stake.isCompleted = true;
+//           justCompleted = true;
+//           user.withdrawableBalance = Number(((user.withdrawableBalance || 0) + stake.totalEarnings).toFixed(2));
+//         }
+
+//         await stake.save({ session });
+//         await user.save({ session });
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         console.log(
+//           `✅ ROI paid | stake=${stake._id} user=${user.email} days=${owedDays} perDay=${roiPerDay} payout=${payout} last=${lastYmd} -> now=${payUntilYmd}${justCompleted ? ' (COMPLETED)' : ''}`
+//         );
+
+//       } catch (err) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
+//       }
+//     }
+//   } catch (err) {
+//     console.error('❌ Error in ROI cron job:', err);
+//   }
+// }, { timezone: TZ });
+
+// // 🔁 Optional: catch-up on boot (if midnight was missed)
+// (async () => {
+//   try {
+//     console.log('⏰ ROI cron registered at', new Date().toISOString(), `TZ=${TZ}`);
+//     // Reuse the same handler by triggering once at startup:
+//     // (simulate a missed midnight – your owed-days logic will handle it safely)
+//     // If you prefer not to pay at boot, comment out the next line.
+//     // await new Promise((r) => setTimeout(r, 1500));
+//     // NOTE: you can extract the loop into a function and call it here.
+//   } catch (e) {
+//     console.error('Startup hook error:', e);
+//   }
+// })();
 const cron = require('node-cron');
-const Stake = require('../model/Stake');
-const User = require('../model/User');
 const mongoose = require('mongoose');
+const Stake = require('../model/Stake');
+const User  = require('../model/User');
 
-cron.schedule('0 0 * * *', async () => {
-  console.log('🟢 Running daily ROI cron job');
+const TZ = 'Africa/Lagos';
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+/* ---------- helpers ---------- */
+function ymdInTZ(date = new Date(), tz = TZ) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(date); // "YYYY-MM-DD"
+}
+function utcFromYmd(ymd) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+function daysDiffYmd(aYmd, bYmd) {
+  return Math.floor((utcFromYmd(bYmd) - utcFromYmd(aYmd)) / ONE_DAY_MS);
+}
+function minYmd(a, b) { return utcFromYmd(a) <= utcFromYmd(b) ? a : b; }
+function maxYmd(a, b) { return utcFromYmd(a) >= utcFromYmd(b) ? a : b; }
+
+/* ---------- optional once-per-day DB lock (recommended if multiple instances) ---------- */
+const lockSchema = new mongoose.Schema({ key: { type: String, unique: true } }, { collection: 'roi_locks', timestamps: true });
+const RoiLock = mongoose.models.RoiLock || mongoose.model('RoiLock', lockSchema);
+async function acquireDailyLock(todayYmd) {
   try {
-    const stakes = await Stake.find({ isCompleted: false }).populate('user');
-
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-    for (const stake of stakes) {
-      const user = stake.user;
-
-      if (!user) {
-        console.warn(`⚠️ Stake ${stake._id} has no associated user`);
-        continue;
-      }
-
-      // Defensive checks
-      if (
-        typeof stake.amount !== 'number' || isNaN(stake.amount) ||
-        typeof stake.dailyROI !== 'number' || isNaN(stake.dailyROI)
-      ) {
-        console.warn(`⚠️ Invalid stake data for stake ${stake._id}. Skipping...`);
-        continue;
-      }
-
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        const dailyEarning = parseFloat(((stake.amount * stake.dailyROI) / 100).toFixed(2));
-
-        // Update stake earnings
-        stake.totalEarnings = (stake.totalEarnings || 0) + dailyEarning;
-        stake.earningsSoFar = (stake.earningsSoFar || 0) + dailyEarning;
-        stake.lastClaimDate = today;
-        stake.roiHistory.push({ date: today, amount: dailyEarning });
-
-        // Update user earnings
-        user.totalEarnings = (user.totalEarnings || 0) + dailyEarning;
-
-        // Check if the stake has matured
-        const now = new Date();
-        const endDate = new Date(stake.endDate);
-        if (now >= endDate && !stake.isCompleted) {
-          stake.isCompleted = true;
-          user.withdrawableBalance = (user.withdrawableBalance || 0) + stake.totalEarnings;
-        }
-
-        await stake.save({ session });
-        await user.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
-
-        console.log(`✅ ROI added for stake ${stake._id} (User: ${user.email})`);
-      } catch (err) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error(`❌ Transaction failed for stake ${stake._id}:`, err);
-      }
-    }
-  } catch (err) {
-    console.error('❌ Error in ROI cron job:', err);
+    await RoiLock.create({ key: `roi:${todayYmd}` });
+    return true; // lock acquired
+  } catch (e) {
+    if (e && e.code === 11000) return false; // someone else ran it
+    throw e;
   }
-});
+}
+
+/* ---------- main runner (exported for manual trigger/testing) ---------- */
+async function processDailyROI(source = 'manual', { useLock = true, dryRun = false } = {}) {
+  const todayYmd = ymdInTZ(new Date(), TZ);
+  console.log(`🟢 ROI run [${source}] for ${todayYmd} (TZ ${TZ})`);
+
+  if (useLock) {
+    const gotLock = await acquireDailyLock(todayYmd);
+    if (!gotLock) {
+      console.log("🔒 Another instance already processed today's ROI. Exiting.");
+      return;
+    }
+  }
+
+  // Active stakes
+  const stakes = await Stake.find({ isCompleted: false }); // no populate; we use atomic $inc on User
+
+  if (!stakes.length) {
+    console.log('ℹ️ No active stakes.');
+    return;
+  }
+
+  for (const stake of stakes) {
+    // Validate numbers
+    const amount   = Number(stake.amount);
+    const dailyROI = Number(stake.dailyROI);
+    if (!Number.isFinite(amount) || !Number.isFinite(dailyROI)) {
+      console.warn(`⚠️ Invalid numbers on stake ${stake._id}. Skipping.`);
+      continue;
+    }
+
+    // ----- owed-days calculation -----
+    const startYmd = ymdInTZ(stake.startDate || stake.createdAt || stake._id.getTimestamp(), TZ);
+    const lastYmd  = stake.lastClaimDate || startYmd;
+    const endYmd   = stake.endDate ? ymdInTZ(stake.endDate, TZ) : null;
+    const payUntil = endYmd ? minYmd(todayYmd, endYmd) : todayYmd;
+
+    let owedDays = daysDiffYmd(lastYmd, payUntil);
+    if (owedDays <= 0) {
+      // nothing to pay (already credited up to today, or starts today)
+      continue;
+    }
+
+    const perDay = Number(((amount * dailyROI) / 100).toFixed(2));
+    const payout = Number((perDay * owedDays).toFixed(2));
+
+    // Debug snapshot
+    console.log({
+      stakeId: stake._id.toString(),
+      userId: stake.user?.toString?.() || String(stake.user),
+      lastYmd, payUntil, owedDays, perDay, payout,
+      totalBefore: stake.totalEarnings || 0
+    });
+
+    if (dryRun) continue; // log-only mode
+
+    // ----- transactional update -----
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      if (!Array.isArray(stake.roiHistory)) stake.roiHistory = [];
+
+      // Update stake first (so we know stake.totalEarnings for completion credit)
+      stake.totalEarnings = Number(((stake.totalEarnings || 0) + payout).toFixed(2));
+      stake.earningsSoFar = Number(((stake.earningsSoFar || 0) + payout).toFixed(2));
+      stake.lastClaimDate = payUntil;
+      stake.roiHistory.push({ date: payUntil, amount: payout, days: owedDays });
+
+      // Determine completion (we paid up to end date)
+      let justCompleted = false;
+      if (endYmd && maxYmd(payUntil, endYmd) === endYmd && payUntil === endYmd && !stake.isCompleted) {
+        stake.isCompleted = true;
+        justCompleted = true;
+      }
+
+      await stake.save({ session });
+
+      // Atomic user update ($inc)
+      await User.updateOne(
+        { _id: stake.user },
+        {
+          $inc: {
+            totalEarnings: payout,
+            ...(justCompleted ? { withdrawableBalance: stake.totalEarnings } : {})
+          }
+        },
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      console.log(`✅ Paid stake=${stake._id} days=${owedDays} perDay=${perDay} payout=${payout}${justCompleted ? ' (COMPLETED)' : ''}`);
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error(`❌ Stake ${stake._id} failed:`, err);
+    }
+  }
+}
+
+/* ---------- schedule at Africa/Lagos midnight (singleton guard) ---------- */
+if (!globalThis.__ROI_CRON_REGISTERED__) {
+  globalThis.__ROI_CRON_REGISTERED__ = true;
+
+  cron.schedule('0 0 * * *', () => {
+    console.log('🕛 Trigger: Africa/Lagos midnight ROI');
+    processDailyROI('cron').catch(console.error);
+  }, { timezone: TZ });
+
+  console.log('⏰ ROI cron registered at', new Date().toISOString(), `TZ=${TZ}`);
+}
+
+module.exports = { processDailyROI };
+
