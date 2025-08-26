@@ -40,7 +40,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("./cronJobs/dailyTasks");
+
 const axios = require("axios");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -213,7 +213,7 @@ app.use("/api", chatGemini);
 const ticketRoutes = require("./routes/supportTickets");
 app.use("/api/tickets", ticketRoutes);
 
-require("./cronJobs/dailyTasks"); // or wherever you save it
+// or wherever you save it
 
 
 const notificationRoutes = require("./routes/notifications");
@@ -287,6 +287,10 @@ mongoose.connect(process.env.MONGODB_URL, {
 .then(() => console.log(" MongoDB Connected"))
 .catch(err => console.error(" MongoDB Connection Error:", err));
 
+app.use('/admin/jobs', require('./routes/adminJobs'));
+
+
+// require("./cronJobs/dailyTasks"); 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 

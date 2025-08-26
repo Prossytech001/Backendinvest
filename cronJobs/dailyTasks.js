@@ -644,7 +644,7 @@ async function processDailyROI(source = 'manual', { useLock = true, dryRun = fal
 }
 
 /* ---------- schedule at Africa/Lagos midnight (singleton guard) ---------- */
-if (!globalThis.__ROI_CRON_REGISTERED__) {
+if (process.env.ENABLE_IN_APP_CRON === 'true' && !globalThis.__ROI_CRON_REGISTERED__) {
   globalThis.__ROI_CRON_REGISTERED__ = true;
 
   cron.schedule('0 0 * * *', () => {
