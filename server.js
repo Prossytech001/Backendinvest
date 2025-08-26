@@ -106,6 +106,9 @@ app.use(express.json({
   }
 }));
 
+app.get('/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+
+
 //  Import and use user routes
 const userRoutes = require("./routes/userRoutes");
 app.use("/api/users", userRoutes);
