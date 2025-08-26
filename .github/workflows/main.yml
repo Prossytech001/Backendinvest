@@ -3,32 +3,40 @@ name: Nightly ROI
 on:
   schedule:
     - cron: "0 23 * * *"   # 23:00 UTC = 00:00 Africa/Lagos
-  workflow_dispatch: {}     # lets you run it manually from the Actions tab
+  workflow_dispatch: {}     # allow manual run
 
-permissions: {}             # minimal permissions
+permissions: {}
+
+env:
+  SERVICE_URL: ${{ secrets.SERVICE_URL }}
+  ROI_ADMIN_KEY: ${{ secrets.ROI_ADMIN_KEY }}
 
 jobs:
   nightly-roi:
     runs-on: ubuntu-latest
     steps:
-      # (optional) wake the Render app first
+      - name: Validate secrets
+        run: |
+          test -n "$SERVICE_URL"    || { echo "❌ Missing SERVICE_URL secret"; exit 1; }
+          test -n "$ROI_ADMIN_KEY"  || { echo "❌ Missing ROI_ADMIN_KEY secret"; exit 1; }
+          echo "✅ Secrets present"
+
+      # Optional wake (use /health if you added it; otherwise /)
       - name: Wake service
         run: |
           curl -sS -m 30 --retry 5 --retry-delay 5 --retry-connrefused \
-            "${{ secrets.SERVICE_URL }}/health" || true
+            "$SERVICE_URL/" || true
 
       - name: Wait for warmup
         run: sleep 15
 
       - name: Trigger ROI
         run: |
-          set -euo pipefail
           curl -sS -m 120 --retry 5 --retry-delay 10 --retry-connrefused \
             -X POST \
-            -H "x-api-key: ${{ secrets.ROI_ADMIN_KEY }}" \
-            "${{ secrets.SERVICE_URL }}/admin/jobs/roi/run"
+            -H "x-api-key: $ROI_ADMIN_KEY" \
+            "$SERVICE_URL/admin/jobs/roi/run"
 
-    # avoid overlapping runs if one is slow
     concurrency:
       group: nightly-roi
       cancel-in-progress: false
